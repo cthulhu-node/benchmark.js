@@ -190,7 +190,7 @@ describe('Benchmark test binding', function () {
     it('should have correct binding for ' + title, function () {
       var bench = Benchmark({
         'setup': 'if(/ops/.test(this))this._setup=true;',
-        'fn': tests[i],
+        'fn': tests[title],
         'teardown': 'if(/ops/.test(this))this._teardown=true;',
         'onCycle': function () { this.abort(); }
       }).run();
