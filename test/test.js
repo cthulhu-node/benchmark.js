@@ -64,7 +64,7 @@ describe('Benchmark', function () {
   });
 });
 
-// /*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 describe('Benchmark constructor', function () {
   it('should create a new instance when called without the `new` operator', function () {
@@ -104,7 +104,7 @@ describe('Benchmark constructor', function () {
   });
 });
 
-// /*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 describe('Benchmark compilation', function () {
   it('should compile using the default "toString" method', function () {
@@ -341,7 +341,7 @@ describe('Benchmark.invoke', function () {
 
     it('should support queuing when passing an ' + key, function () {
       var lengths = [];
-      var array = Array.isArray(objects[key]) && Array.from(objects[key]) || {...objects[key]};
+      var array = Array.isArray(objects[key]) && Array.from(objects[key]) || { ...objects[key] };
       var actual = Benchmark.invoke(array, {
         'name': 'concat',
         'queued': true,
@@ -456,7 +456,7 @@ describe('Benchmark#reset', function () {
   });
 });
 
-// /*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
 describe('Benchmark#run', function () {
   var data = { 'onComplete': 0, 'onCycle': 0, 'onStart': 0 };
@@ -479,302 +479,296 @@ describe('Benchmark#run', function () {
   });
 });
 
-// /*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 
+var constructors = {
+  'Benchmark': Benchmark,
+  'Benchmark.Suite': Benchmark.Suite
+};
 
-// _.forOwn({
-//   'Benchmark': Benchmark,
-//   'Benchmark.Suite': Benchmark.Suite
-// },
-//   function (Constructor, namespace) {
-  var constructors = {
-    'Benchmark': Benchmark,
-    'Benchmark.Suite': Benchmark.Suite
-  };
+var namespaces = Object.keys(constructors);
+for (let i = 0, il = namespaces.length; i < il; ++i) {
+  var namespace = namespaces[i];
+  var Constructor = constructors[namespaces[i]];
 
-  var namespaces = Object.keys(constructors);
-  for (let i = 0, il = namespaces.length; i < il; ++i) {
-    var namespace = namespaces[i];
-    var Constructor = constructors[namespaces[i]];
+  describe(namespace + '#emit', function () {
+    it('should emit passed arguments', function () {
+      var args,
+        object = Constructor();
 
-    describe(namespace + '#emit', function () {
-      it('should emit passed arguments', function () {
-        var args,
-          object = Constructor();
-
-        object.on('args', function () { args = slice.call(arguments, 1); });
-        object.emit('args', 'a', 'b', 'c');
-        assert.deepEqual(args, ['a', 'b', 'c']);
-      });
-
-      it('should emit with no listeners', function () {
-        var event = Benchmark.Event('empty'),
-          object = Constructor();
-
-        object.emit(event);
-        assert.strictEqual(event.cancelled, false);
-      });
-
-      it('should emit with an event type of "toString"', function () {
-        var event = Benchmark.Event('toString'),
-          object = Constructor();
-
-        object.emit(event);
-        assert.strictEqual(event.cancelled, false);
-      });
-
-      it('should returns the last listeners returned value', function () {
-        var event = Benchmark.Event('result'),
-          object = Constructor();
-
-        object.on('result', function () { return 'x'; });
-        object.on('result', function () { return 'y'; });
-        assert.strictEqual(object.emit(event), 'y');
-      });
-
-      it('should abort the emitters listener iteration when `event.aborted` is `true`', function () {
-        var event = Benchmark.Event('aborted'),
-          object = Constructor();
-
-        object.on('aborted', function (event) {
-          event.aborted = true;
-          return false;
-        });
-
-        object.on('aborted', function (event) {
-          // should not get here
-          event.aborted = false;
-          return true;
-        });
-
-        assert.strictEqual(object.emit(event), false);
-        assert.strictEqual(event.aborted, true);
-      });
-
-      it('should cancel the event if a listener explicitly returns `false`', function () {
-        var event = Benchmark.Event('cancel'),
-          object = Constructor();
-
-        object.on('cancel', function () { return false; });
-        object.on('cancel', function () { return true; });
-        object.emit(event);
-        assert.strictEqual(event.cancelled, true);
-      });
-
-      it('should use a shallow clone of the listeners when emitting', function () {
-        var event,
-          listener2 = function (eventObject) { eventObject.listener2 = true },
-          object = Constructor();
-
-        object.on('shallowclone', function (eventObject) {
-          event = eventObject;
-          object.off(event.type, listener2);
-        })
-          .on('shallowclone', listener2)
-          .emit('shallowclone');
-
-        assert.ok(event.listener2);
-      });
-
-      it('should emit a custom event object', function () {
-        var event = Benchmark.Event('custom'),
-          object = Constructor();
-
-        object.on('custom', function (eventObject) { eventObject.touched = true; });
-        object.emit(event);
-        assert.ok(event.touched);
-      });
-
-      it('should set `event.result` correctly', function () {
-        var event = Benchmark.Event('result'),
-          object = Constructor();
-
-        object.on('result', function () { return 'x'; });
-        object.emit(event);
-        assert.strictEqual(event.result, 'x');
-      });
-
-      it('should correctly set `event.type`', function () {
-        var event,
-          object = Constructor();
-
-        object.on('type', function (eventObj) {
-          event = eventObj;
-        });
-
-        object.emit('type');
-        assert.strictEqual(event.type, 'type');
-      });
+      object.on('args', function () { args = slice.call(arguments, 1); });
+      object.emit('args', 'a', 'b', 'c');
+      assert.deepEqual(args, ['a', 'b', 'c']);
     });
 
-    /*------------------------------------------------------------------------*/
+    it('should emit with no listeners', function () {
+      var event = Benchmark.Event('empty'),
+        object = Constructor();
 
-    describe(namespace + '#listeners', function () {
-      it('should return the correct listeners', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        assert.deepEqual(object.listeners('x'), [listener]);
-      });
-
-      it('should return an array and initializes previously uninitialized listeners', function () {
-        var object = Constructor();
-        assert.deepEqual(object.listeners('x'), []);
-        assert.deepEqual(object.events, { 'x': [] });
-      });
+      object.emit(event);
+      assert.strictEqual(event.cancelled, false);
     });
 
-    /*------------------------------------------------------------------------*/
+    it('should emit with an event type of "toString"', function () {
+      var event = Benchmark.Event('toString'),
+        object = Constructor();
 
-    describe(namespace + '#off', function () {
-      it('should return the benchmark', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        assert.strictEqual(object.off('x', listener), object);
-      });
-
-      it('should ignore inherited properties of the event cache', function () {
-        var Dummy = function () { },
-          listener = function () { },
-          object = Constructor();
-
-        Dummy.prototype.x = [listener];
-        object.events = new Dummy;
-
-        object.off('x', listener);
-        assert.deepEqual(object.events.x, [listener]);
-      });
-
-      it('should handle an event type and listener', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        object.off('x', listener);
-        assert.deepEqual(object.events.x, []);
-      });
-
-      it('should handle unregistering duplicate listeners', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        object.on('x', listener);
-
-        var events = object.events;
-        object.off('x', listener);
-        assert.deepEqual(events.x, [listener]);
-
-        object.off('x', listener);
-        assert.deepEqual(events.x, []);
-      });
-
-      it('should handle a non-registered listener', function () {
-        var object = Constructor();
-        object.off('x', function () { });
-        assert.strictEqual(object.events, undefined);
-      });
-
-      it('should handle space separated event type and listener', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        object.on('y', listener);
-
-        var events = object.events;
-        object.off('x y', listener);
-        assert.deepEqual(events.x, []);
-        assert.deepEqual(events.y, []);
-      });
-
-      it('should handle space separated event type and no listener', function () {
-        var listener1 = function () { },
-          listener2 = function () { },
-          object = Constructor();
-
-        object.on('x', listener1);
-        object.on('y', listener2);
-
-        var events = object.events;
-        object.off('x y');
-        assert.deepEqual(events.x, []);
-        assert.deepEqual(events.y, []);
-      });
-
-      it('should handle no arguments', function () {
-        var listener1 = function () { },
-          listener2 = function () { },
-          listener3 = function () { },
-          object = Constructor();
-
-        object.on('x', listener1);
-        object.on('y', listener2);
-        object.on('z', listener3);
-
-        var events = object.events;
-        object.off();
-        assert.deepEqual(events.x, []);
-        assert.deepEqual(events.y, []);
-        assert.deepEqual(events.z, []);
-      });
+      object.emit(event);
+      assert.strictEqual(event.cancelled, false);
     });
 
-    /*------------------------------------------------------------------------*/
+    it('should returns the last listeners returned value', function () {
+      var event = Benchmark.Event('result'),
+        object = Constructor();
 
-    describe(namespace + '#on', function () {
-      it('should return the benchmark', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        assert.strictEqual(object.on('x', listener), object);
-      });
-
-      it('should ignore inherited properties of the event cache', function () {
-        var Dummy = function () { },
-          listener1 = function () { },
-          listener2 = function () { },
-          object = Constructor();
-
-        Dummy.prototype.x = [listener1];
-        object.events = new Dummy;
-
-        object.on('x', listener2);
-        assert.deepEqual(object.events.x, [listener2]);
-      });
-
-      it('should handle an event type and listener', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        assert.deepEqual(object.events.x, [listener]);
-      });
-
-      it('should handle registering duplicate listeners', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x', listener);
-        object.on('x', listener);
-        assert.deepEqual(object.events.x, [listener, listener]);
-      });
-
-      it('should handle space separated event type and listener', function () {
-        var listener = function () { },
-          object = Constructor();
-
-        object.on('x y', listener);
-
-        var events = object.events;
-        assert.deepEqual(events.x, [listener]);
-        assert.deepEqual(events.y, [listener]);
-      });
+      object.on('result', function () { return 'x'; });
+      object.on('result', function () { return 'y'; });
+      assert.strictEqual(object.emit(event), 'y');
     });
-  }
+
+    it('should abort the emitters listener iteration when `event.aborted` is `true`', function () {
+      var event = Benchmark.Event('aborted'),
+        object = Constructor();
+
+      object.on('aborted', function (event) {
+        event.aborted = true;
+        return false;
+      });
+
+      object.on('aborted', function (event) {
+        // should not get here
+        event.aborted = false;
+        return true;
+      });
+
+      assert.strictEqual(object.emit(event), false);
+      assert.strictEqual(event.aborted, true);
+    });
+
+    it('should cancel the event if a listener explicitly returns `false`', function () {
+      var event = Benchmark.Event('cancel'),
+        object = Constructor();
+
+      object.on('cancel', function () { return false; });
+      object.on('cancel', function () { return true; });
+      object.emit(event);
+      assert.strictEqual(event.cancelled, true);
+    });
+
+    it('should use a shallow clone of the listeners when emitting', function () {
+      var event,
+        listener2 = function (eventObject) { eventObject.listener2 = true },
+        object = Constructor();
+
+      object.on('shallowclone', function (eventObject) {
+        event = eventObject;
+        object.off(event.type, listener2);
+      })
+        .on('shallowclone', listener2)
+        .emit('shallowclone');
+
+      assert.ok(event.listener2);
+    });
+
+    it('should emit a custom event object', function () {
+      var event = Benchmark.Event('custom'),
+        object = Constructor();
+
+      object.on('custom', function (eventObject) { eventObject.touched = true; });
+      object.emit(event);
+      assert.ok(event.touched);
+    });
+
+    it('should set `event.result` correctly', function () {
+      var event = Benchmark.Event('result'),
+        object = Constructor();
+
+      object.on('result', function () { return 'x'; });
+      object.emit(event);
+      assert.strictEqual(event.result, 'x');
+    });
+
+    it('should correctly set `event.type`', function () {
+      var event,
+        object = Constructor();
+
+      object.on('type', function (eventObj) {
+        event = eventObj;
+      });
+
+      object.emit('type');
+      assert.strictEqual(event.type, 'type');
+    });
+  });
+
+  /*------------------------------------------------------------------------*/
+
+  describe(namespace + '#listeners', function () {
+    it('should return the correct listeners', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      assert.deepEqual(object.listeners('x'), [listener]);
+    });
+
+    it('should return an array and initializes previously uninitialized listeners', function () {
+      var object = Constructor();
+      assert.deepEqual(object.listeners('x'), []);
+      assert.deepEqual(object.events, { 'x': [] });
+    });
+  });
+
+  /*------------------------------------------------------------------------*/
+
+  describe(namespace + '#off', function () {
+    it('should return the benchmark', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      assert.strictEqual(object.off('x', listener), object);
+    });
+
+    it('should ignore inherited properties of the event cache', function () {
+      var Dummy = function () { },
+        listener = function () { },
+        object = Constructor();
+
+      Dummy.prototype.x = [listener];
+      object.events = new Dummy;
+
+      object.off('x', listener);
+      assert.deepEqual(object.events.x, [listener]);
+    });
+
+    it('should handle an event type and listener', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      object.off('x', listener);
+      assert.deepEqual(object.events.x, []);
+    });
+
+    it('should handle unregistering duplicate listeners', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      object.on('x', listener);
+
+      var events = object.events;
+      object.off('x', listener);
+      assert.deepEqual(events.x, [listener]);
+
+      object.off('x', listener);
+      assert.deepEqual(events.x, []);
+    });
+
+    it('should handle a non-registered listener', function () {
+      var object = Constructor();
+      object.off('x', function () { });
+      assert.strictEqual(object.events, undefined);
+    });
+
+    it('should handle space separated event type and listener', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      object.on('y', listener);
+
+      var events = object.events;
+      object.off('x y', listener);
+      assert.deepEqual(events.x, []);
+      assert.deepEqual(events.y, []);
+    });
+
+    it('should handle space separated event type and no listener', function () {
+      var listener1 = function () { },
+        listener2 = function () { },
+        object = Constructor();
+
+      object.on('x', listener1);
+      object.on('y', listener2);
+
+      var events = object.events;
+      object.off('x y');
+      assert.deepEqual(events.x, []);
+      assert.deepEqual(events.y, []);
+    });
+
+    it('should handle no arguments', function () {
+      var listener1 = function () { },
+        listener2 = function () { },
+        listener3 = function () { },
+        object = Constructor();
+
+      object.on('x', listener1);
+      object.on('y', listener2);
+      object.on('z', listener3);
+
+      var events = object.events;
+      object.off();
+      assert.deepEqual(events.x, []);
+      assert.deepEqual(events.y, []);
+      assert.deepEqual(events.z, []);
+    });
+  });
+
+  /*------------------------------------------------------------------------*/
+
+  describe(namespace + '#on', function () {
+    it('should return the benchmark', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      assert.strictEqual(object.on('x', listener), object);
+    });
+
+    it('should ignore inherited properties of the event cache', function () {
+      var Dummy = function () { },
+        listener1 = function () { },
+        listener2 = function () { },
+        object = Constructor();
+
+      Dummy.prototype.x = [listener1];
+      object.events = new Dummy;
+
+      object.on('x', listener2);
+      assert.deepEqual(object.events.x, [listener2]);
+    });
+
+    it('should handle an event type and listener', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      assert.deepEqual(object.events.x, [listener]);
+    });
+
+    it('should handle registering duplicate listeners', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x', listener);
+      object.on('x', listener);
+      assert.deepEqual(object.events.x, [listener, listener]);
+    });
+
+    it('should handle space separated event type and listener', function () {
+      var listener = function () { },
+        object = Constructor();
+
+      object.on('x y', listener);
+
+      var events = object.events;
+      assert.deepEqual(events.x, [listener]);
+      assert.deepEqual(events.y, [listener]);
+    });
+  });
+}
 /*--------------------------------------------------------------------------*/
 
 describe('Benchmark.Suite#abort', function () {
