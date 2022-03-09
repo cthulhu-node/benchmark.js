@@ -341,12 +341,13 @@ describe('Benchmark.invoke', function () {
 
     it('should support queuing when passing an ' + key, function () {
       var lengths = [];
-      var actual = Benchmark.invoke(objects[key], {
+      var array = Array.isArray(objects[key]) && Array.from(objects[key]) || {...objects[key]};
+      var actual = Benchmark.invoke(array, {
         'name': 'concat',
         'queued': true,
         'args': 'x',
         'onCycle': function () {
-          lengths.push(objects[key].length);
+          lengths.push(array.length);
         }
       });
 
