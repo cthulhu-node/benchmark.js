@@ -4,7 +4,7 @@ import { isStringable } from "../helpers/isStringable";
  * Gets the source code of a function.
  */
 export function getSource(fn: Function, decompilationSupported: boolean) {
-  var result = '';
+  let result = '';
   if (isStringable(fn)) {
     result = String(fn);
   } else if (decompilationSupported) {

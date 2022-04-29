@@ -12,6 +12,6 @@ export function isHostType(object: { [key: string]: any; }, property: keyof Cont
   if (object == null) {
     return false;
   }
-  var type = typeof object[property];
+  const type = typeof object[property];
   return !rePrimitive.test(type) && (type != 'object' || !!object[property]);
 }

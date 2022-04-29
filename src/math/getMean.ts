@@ -6,9 +6,10 @@ export function getMean(sample: number[]): number {
     return 0;
   }
 
-  var result = 0;
-
-  for (var i = 0, il = sample.length; i < il; ++i) {
+  let result = 0;
+  let i = 0;
+  const il = sample.length;
+  for (; i < il; ++i) {
     result += sample[i];
   }
   return result / sample.length;

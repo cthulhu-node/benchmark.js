@@ -12,14 +12,16 @@ export function setOptions(object: AnyObject, options: AnyObject): void {
   // @ts-ignore
   options = object.options = Object.assign({}, cloneDeep(object.constructor.options), cloneDeep(options));
 
-  var keys = Object.keys(options);
-  for (var i = 0, il = keys.length; i < il; ++i) {
-    var key = keys[i],
+  const keys = Object.keys(options);
+  let i = 0;
+  const il = keys.length;
+  for (; i < il; ++i) {
+    const key = keys[i],
       value = options[keys[i]];
     if (value != null) {
       // Add event listeners.
       if (onEventRE.test(key)) {
-        var onEventKeys = key.indexOf(' ') === -1
+        const onEventKeys = key.indexOf(' ') === -1
           ? [key]
           : key.split(' ');
 

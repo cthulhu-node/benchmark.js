@@ -9,6 +9,7 @@
  */
 
 import { delay } from "./bench/delay";
+import { enqueue } from "./bench/enqueue";
 import { getFirstArgument } from "./functions/getFirstArgument";
 import { cloneDeep } from "./helpers/cloneDeep";
 import { each } from "./helpers/each";
@@ -36,6 +37,9 @@ import { tTable } from "./statistics/tTable";
 import { uTable } from "./statistics/uTable";
 import { getSupport } from "./Support";
 import { Context, getContext } from "./types/Context";
+import { toString } from "./bench/toString";
+import { destroyElement } from "./browser/destroyElement";
+import { getSource } from "./functions/getSource";
 
 ; (function () {
   'use strict';
@@ -83,7 +87,7 @@ import { Context, getContext } from "./types/Context";
     context = context ? Object.assign({}, root.Object(), context, getContext(root)) : root;
 
     /** Native constructor references. */
-    var Array = context.Array,
+    let Array = context.Array,
       Date = context.Date,
       Function = context.Function,
       Math = context.Math,
@@ -107,7 +111,6 @@ import { Context, getContext } from "./types/Context";
       shift = arrayRef.shift,
       slice = arrayRef.slice,
       sqrt = Math.sqrt,
-      toString = objectProto.toString,
       unshift = arrayRef.unshift;
 
     /** Detect DOM document object. */
@@ -243,34 +246,6 @@ import { Context, getContext } from "./types/Context";
     }
 
     /**
-     * Destroys the given element.
-     */
-    function destroyElement(element) {
-      trash.appendChild(element);
-      trash.innerHTML = '';
-    }
-
-    /**
-     * Gets the source code of a function.
-     */
-    function getSource(fn) {
-      var result = '';
-      if (isStringable(fn)) {
-        result = String(fn);
-      } else if (support.decompilation) {
-        // Escape the `{` for Firefox 1.
-        result = /^[^{]+\{([\s\S]*)\}\s*$/.exec(fn)[1];
-      }
-      // Trim string.
-      result = (result || '').replace(/^\s+|\s+$/g, '');
-
-      // Detect strings containing only the "use strict" directive.
-      return /^(?:\/\*[\w\W]*?\*\/|\/\/.*?[\n\r\u2028\u2029]|\s)*(["'])use strict\1;?$/.test(result)
-        ? ''
-        : result;
-    }
-
-    /**
      * Runs a snippet of JavaScript via script injection.
      */
     function runScript(code) {
@@ -288,7 +263,7 @@ import { Context, getContext } from "./types/Context";
         // Remove the inserted script *before* running the code to avoid differences
         // in the expected script element count/order of the document.
         script.appendChild(doc.createTextNode(prefix + code));
-        anchor[prop] = function () { destroyElement(script); };
+        anchor[prop] = function () { destroyElement(script, trash); };
       } catch (e) {
         parent = parent.cloneNode(false);
         sibling = null;
@@ -356,7 +331,7 @@ import { Context, getContext } from "./types/Context";
       var deferred = this,
         clone = deferred.benchmark;
 
-      var event = Event('error');
+      var event = new Event('error');
       clone.error = error;
       clone.message = error && error.message;
       clone.emit(event);
@@ -437,7 +412,7 @@ import { Context, getContext } from "./types/Context";
         // Emit "cycle" event.
         eventProps.type = 'cycle';
         eventProps.target = last;
-        cycleEvent = Event(eventProps);
+        cycleEvent = new Event(eventProps);
         options.onCycle.call(benches, cycleEvent);
 
         // Choose next benchmark if not exiting early.
@@ -540,7 +515,7 @@ import { Context, getContext } from "./types/Context";
         resetting = calledBy.resetSuite;
 
       if (suite.running) {
-        event = Event('abort');
+        event = new Event('abort');
         suite.emit(event);
         if (!event.cancelled || resetting) {
           // Avoid infinite recursion.
@@ -560,7 +535,7 @@ import { Context, getContext } from "./types/Context";
     function add(name, fn, options) {
       var suite = this,
         bench = new Benchmark(name, fn, options),
-        event = Event({ 'type': 'add', 'target': bench });
+        event = new Event({ 'type': 'add', 'target': bench });
 
       if (suite.emit(event), !event.cancelled) {
         suite.push(bench);
@@ -607,7 +582,7 @@ import { Context, getContext } from "./types/Context";
       }
       // Reset if the state has changed.
       else if ((suite.aborted || suite.running) &&
-        (suite.emit(event = Event('reset')), !event.cancelled)) {
+        (suite.emit(event = new Event('reset')), !event.cancelled)) {
         suite.aborted = suite.running = false;
         if (!aborting) {
           invoke(suite, 'reset');
@@ -649,7 +624,7 @@ import { Context, getContext } from "./types/Context";
     function emit(type) {
       var listeners,
         object = this,
-        event = Event(type),
+        event = new Event(type),
         events = object.events,
         args = (arguments[0] = event, arguments);
 
@@ -709,9 +684,9 @@ import { Context, getContext } from "./types/Context";
           ? [type]
           : type.split(' ');
 
-          for (var i = 0, il = types.length; i < il; ++i) {
-            callback(types[i]);
-          }
+        for (var i = 0, il = types.length; i < il; ++i) {
+          callback(types[i]);
+        }
         return this;
       }
 
@@ -747,7 +722,7 @@ import { Context, getContext } from "./types/Context";
         resetting = calledBy.reset;
 
       if (bench.running) {
-        event = Event('abort');
+        event = new Event('abort');
         bench.emit(event);
         if (!event.cancelled || resetting) {
           // Avoid infinite recursion.
@@ -888,42 +863,13 @@ import { Context, getContext } from "./types/Context";
 
       // If changed emit the `reset` event and if it isn't cancelled reset the benchmark.
       if (changes.length &&
-        (bench.emit(event = Event('reset')), !event.cancelled)) {
+        (bench.emit(event = new Event('reset')), !event.cancelled)) {
         for (var i = 0, il = changes.length; i < il; ++i) {
           var data = changes[i];
           data.destination[data.key] = data.value;
         }
       }
       return bench;
-    }
-
-    function toStringBench() {
-      var bench = this,
-        error = bench.error,
-        hz = bench.hz,
-        id = bench.id,
-        stats = bench.stats,
-        size = stats.sample.length,
-        pm = '\xb1',
-        result = bench.name || (Number.isNaN(id) ? id : '<Test #' + id + '>');
-
-      if (error) {
-        var errorStr;
-        if (typeof error !== 'object') {
-          errorStr = String(error);
-        } else if (!(error instanceof Error)) {
-          errorStr = join(error);
-        } else {
-          // Error#name and Error#message properties are non-enumerable.
-          errorStr = join(Object.assign({ 'name': error.name, 'message': error.message }, error));
-        }
-        result += ': ' + errorStr;
-      }
-      else {
-        result += ' x ' + formatNumber(hz.toFixed(hz < 100 ? 2 : 0)) + ' ops/sec ' + pm +
-          stats.rme.toFixed(2) + '% (' + size + ' run' + (size === 1 ? '' : 's') + ' sampled)';
-      }
-      return result;
     }
 
     /**
@@ -1041,10 +987,10 @@ import { Context, getContext } from "./types/Context";
         templateData.uid = uid + uidCounter++;
 
         Object.assign(templateData, {
-          'setup': decompilable ? getSource(bench.setup) : interpolate('m#.setup()'),
-          'fn': decompilable ? getSource(fn) : interpolate('m#.fn(' + fnArg + ')'),
+          'setup': decompilable ? getSource(bench.setup, support.decompilation) : interpolate('m#.setup()'),
+          'fn': decompilable ? getSource(fn, support.decompilation) : interpolate('m#.fn(' + fnArg + ')'),
           'fnArg': fnArg,
-          'teardown': decompilable ? getSource(bench.teardown) : interpolate('m#.teardown()')
+          'teardown': decompilable ? getSource(bench.teardown, support.decompilation) : interpolate('m#.teardown()')
         });
 
         // Use API of chosen timer.
@@ -1162,23 +1108,8 @@ import { Context, getContext } from "./types/Context";
         sample = bench.stats.sample;
 
       /**
-       * Adds a clone to the queue.
-       */
-      function enqueue() {
-        queue.push(Object.assign(bench.clone(), {
-          '_original': bench,
-          'events': {
-            'abort': [update],
-            'cycle': [update],
-            'error': [update],
-            'start': [update]
-          }
-        }));
-      }
-
-      /**
-       * Updates the clone/original benchmarks to keep their data in sync.
-       */
+     * Updates the clone/original benchmarks to keep their data in sync.
+     */
       function update(event) {
         var clone = this,
           type = event.type;
@@ -1278,14 +1209,14 @@ import { Context, getContext } from "./types/Context";
         }
         // If time permits, increase sample size to reduce the margin of error.
         if (queue.length < 2 && !maxedOut) {
-          enqueue();
+          enqueue(queue, bench, update);
         }
         // Abort the `invoke` cycle when done.
         event.aborted = done;
       }
 
       // Init queue and begin.
-      enqueue();
+      enqueue(queue, bench, update);
       invoke(queue, {
         'name': 'run',
         'args': { 'async': async },
@@ -1328,7 +1259,7 @@ import { Context, getContext } from "./types/Context";
           bench.cycles = cycles;
         }
         if (clone.error) {
-          event = Event('error');
+          event = new Event('error');
           event.message = clone.error;
           clone.emit(event);
           if (!event.cancelled) {
@@ -1363,7 +1294,7 @@ import { Context, getContext } from "./types/Context";
         }
       }
       // Should we exit early?
-      event = Event('cycle');
+      event = new Event('cycle');
       clone.emit(event);
       if (event.aborted) {
         clone.abort();
@@ -1393,7 +1324,7 @@ import { Context, getContext } from "./types/Context";
 
     function run(options) {
       var bench = this,
-        event = Event('start');
+        event = new Event('start');
 
       // Set `running` to `false` so `reset()` won't call `abort()`.
       bench.running = false;
@@ -1508,7 +1439,7 @@ import { Context, getContext } from "./types/Context";
       'on': on,
       'reset': reset,
       'run': run,
-      'toString': toStringBench
+      'toString': toString.bind(Benchmark.prototype)
     });
 
     Object.assign(Deferred.prototype, {
