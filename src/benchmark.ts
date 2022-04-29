@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nkocheck
 /*!
  * Benchmark.js
  * Copyright Aras Abbasi
@@ -40,6 +40,9 @@ import { Context, getContext } from "./types/Context";
 import { toString } from "./bench/toString";
 import { destroyElement } from "./browser/destroyElement";
 import { getSource } from "./functions/getSource";
+import { setOptions } from "./helpers/setOptions";
+import { interpolateByTemplateData } from "./functions/interpolate";
+import { AnyObject } from "./AnyObject";
 
 ; (function () {
   'use strict';
@@ -53,12 +56,14 @@ import { getSource } from "./functions/getSource";
   var root = ((typeof window === 'function' || typeof window === 'object') && window) || this;
 
   /** Detect free variable `define`. */
+      // @ts-ignore
   var freeDefine = typeof define === 'function' && typeof define.amd === 'object' && define.amd && define;
 
   /** Detect free variable `exports`. */
   var freeExports = (typeof exports === 'function' || typeof exports === 'object') && exports && !exports.nodeType && exports;
 
   /** Detect free variable `module`. */
+      // @ts-ignore
   var freeModule = (typeof module === 'function' || typeof module === 'object') && module && !module.nodeType && module;
 
   /** Detect free variable `global` from Node.js or Browserified code and use it as `root`. */
@@ -66,9 +71,6 @@ import { getSource } from "./functions/getSource";
   if (freeGlobal && (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal || freeGlobal.self === freeGlobal)) {
     root = freeGlobal;
   }
-
-  /** Detect free variable `require`. */
-  var freeRequire = typeof require === 'function' && require;
 
   /** Used to assign each benchmark an incremented id. */
   var counter = 0;
@@ -84,6 +86,7 @@ import { getSource } from "./functions/getSource";
     // after built-in constructors like `Object`, for the creation of literals.
     // ES5 clears this up by stating that literals must use built-in constructors.
     // See http://es5.github.io/#x11.1.5.
+      // @ts-ignore
     context = context ? Object.assign({}, root.Object(), context, getContext(root)) : root;
 
     /** Native constructor references. */
@@ -92,7 +95,6 @@ import { getSource } from "./functions/getSource";
       Function = context.Function,
       Math = context.Math,
       Object = context.Object,
-      RegExp = context.RegExp,
       String = context.String;
 
     /** Used for `Array` and `Object` method references. */
@@ -126,7 +128,7 @@ import { getSource } from "./functions/getSource";
     var uid = 'uid' + (+Date.now());
 
     /** Used to avoid infinite recursion when methods call each other. */
-    var calledBy = {};
+    var calledBy = {} as AnyObject;
 
     var support = getSupport(context);
 
@@ -134,11 +136,13 @@ import { getSource } from "./functions/getSource";
      * Timer object used by `clock()` and `Deferred#resolve`.
      */
     var timer = {
-
+      'unit': null,
       /**
        * The timer namespace object or constructor.
        */
       'ns': Date,
+
+      'res': null,
 
       /**
        * Starts the deferred timer.
@@ -151,13 +155,15 @@ import { getSource } from "./functions/getSource";
       'stop': null // Lazy defined in `clock()`.
     };
 
-    function Benchmark(name, fn, options) {
-      var bench = this;
+    function Benchmark(name, fn, options): void {
 
       // Allow instance creation without the `new` operator.
-      if (!(bench instanceof Benchmark)) {
+      if (!(this instanceof Benchmark)) {
         return new Benchmark(name, fn, options);
       }
+
+      this.options = {};
+      var bench = this as AnyObject;
       // Juggle arguments.
       if (isPlainObject(name)) {
         // 1 argument (options).
@@ -187,32 +193,35 @@ import { getSource } from "./functions/getSource";
       bench.times = cloneDeep(bench.times);
     }
 
-    function Deferred(clone) {
-      var deferred = this;
-      if (!(deferred instanceof Deferred)) {
+    function Deferred(clone): void {
+      if (!(this instanceof Deferred)) {
         return new Deferred(clone);
       }
+      var deferred = this;
       deferred.benchmark = clone;
+      // @ts-ignore
       clock(deferred);
     }
 
-    function Event(type) {
-      var event = this;
+    function Event(type): void {
       if (type instanceof Event) {
+        // @ts-ignore
         return type;
       }
+      var event = this;
       return (event instanceof Event)
         ? Object.assign(event, { 'timeStamp': (+Date.now()) }, typeof type === 'string' ? { 'type': type } : type)
         : new Event(type);
     }
 
-    function Suite(name, options) {
-      var suite = this;
+    function Suite(name, options): void {
 
       // Allow instance creation without the `new` operator.
-      if (!(suite instanceof Suite)) {
+      if (!(this instanceof Suite)) {
         return new Suite(name, options);
       }
+      var suite = this;
+
       // Juggle arguments.
       if (isPlainObject(name)) {
         // 1 argument (options).
@@ -227,9 +236,9 @@ import { getSource } from "./functions/getSource";
     /**
      * Creates a function from the given arguments string and body.
      */
-    function createFunction() {
+    function createFunction(...args: any[]): Function {
       // Lazy define.
-      createFunction = function (args, body) {
+      let fn: Function = function (args: any[], body: string) {
         var result,
           anchor = freeDefine ? freeDefine.amd : Benchmark,
           prop = uid + 'createFunction';
@@ -241,18 +250,19 @@ import { getSource } from "./functions/getSource";
       };
       // Fix JaegerMonkey bug.
       // For more information see http://bugzil.la/639720.
-      createFunction = support.browser && support.canInjectScript && (createFunction('', 'return"' + uid + '"') || noop)() === uid ? createFunction : Function;
-      return createFunction.apply(null, arguments);
+      fn = support.browser && support.canInjectScript && (fn('', 'return"' + uid + '"') || noop)() === uid ? fn : Function;
+      return fn.apply(null, arguments);
     }
 
     /**
      * Runs a snippet of JavaScript via script injection.
      */
-    function runScript(code) {
+    function runScript(code: string) {
+      // @ts-ignore
       var anchor = freeDefine ? define.amd : Benchmark,
         script = doc.createElement('script'),
         sibling = doc.getElementsByTagName('script')[0],
-        parent = sibling.parentNode,
+        parent: Node = sibling.parentNode,
         prop = uid + 'runScript',
         prefix = '(' + (freeDefine ? 'define.amd.' : 'Benchmark.') + prop + '||function(){})();';
 
@@ -271,35 +281,6 @@ import { getSource } from "./functions/getSource";
       }
       parent.insertBefore(script, sibling);
       delete anchor[prop];
-    }
-
-    var onEventRE = /^on[A-Z]/;
-
-    /**
-     * A helper function for setting options/event handlers.
-     */
-    function setOptions(object, options) {
-      options = object.options = Object.assign({}, cloneDeep(object.constructor.options), cloneDeep(options));
-
-      var keys = Object.keys(options);
-      for (var i = 0, il = keys.length; i < il; ++i) {
-        var key = keys[i],
-          value = options[keys[i]];
-        if (value != null) {
-          // Add event listeners.
-          if (onEventRE.test(key)) {
-            var onEventKeys = key.indexOf(' ') === -1
-              ? [key]
-              : key.split(' ');
-
-            each(onEventKeys, function (key) {
-              object.on(key.slice(2).toLowerCase(), value);
-            });
-          } else if (!has(object, key)) {
-            object[key] = cloneDeep(value);
-          }
-        }
-      }
     }
 
     function resolve() {
@@ -346,7 +327,7 @@ import { getSource } from "./functions/getSource";
       }
       else if (callback === 'fastest' || callback === 'slowest') {
         // Get successful, sort by period + margin of error, and filter fastest/slowest.
-        var result = filter(array, 'successful').sort(function (a, b) {
+        const result = filter(array, 'successful').sort(function (a, b) {
           a = a.stats; b = b.stats;
           return (a.mean + a.moe > b.mean + b.moe ? 1 : -1) * (callback === 'fastest' ? 1 : -1);
         });
@@ -358,7 +339,7 @@ import { getSource } from "./functions/getSource";
       if (Array.isArray(array)) {
         return array.filter(callback);
       } else if (isArrayLikeObject(array)) {
-        var result = [];
+        const result = [];
         for (var i = 0, il = array.length; i < il; ++i) {
           if (callback(array[i], i, array)) {
             result.push(array[i]);
@@ -374,8 +355,8 @@ import { getSource } from "./functions/getSource";
         bench,
         queued,
         index = -1,
-        eventProps = { 'currentTarget': benches },
-        options = { 'onStart': noop, 'onCycle': noop, 'onComplete': noop },
+        eventProps = { 'currentTarget': benches } as AnyObject,
+        options = { 'onStart': noop, 'onCycle': noop, 'onComplete': noop } as AnyObject,
         result = toArray(benches);
 
       /**
@@ -400,7 +381,7 @@ import { getSource } from "./functions/getSource";
       /**
        * Fetches the next bench or executes `onComplete` callback.
        */
-      function getNext(event) {
+      function getNext(event?) {
         var cycleEvent,
           last = bench,
           async = isAsync(last);
@@ -416,7 +397,7 @@ import { getSource } from "./functions/getSource";
         options.onCycle.call(benches, cycleEvent);
 
         // Choose next benchmark if not exiting early.
-        if (!cycleEvent.aborted && raiseIndex() !== false) {
+        if (!cycleEvent.aborted && raiseIndex() !== null) {
           bench = queued ? benches[0] : result[index];
           if (isAsync(bench)) {
             delay(bench, execute);
@@ -436,11 +417,11 @@ import { getSource } from "./functions/getSource";
         }
         // When used as a listener `event.aborted = true` will cancel the rest of
         // the "complete" listeners because they were already called above and when
-        // used as part of `getNext` the `return false` will exit the execution while-loop.
+        // used as part of `getNext` the `return null` will exit the execution while-loop.
         if (event) {
           event.aborted = true;
         } else {
-          return false;
+          return null;
         }
       }
 
@@ -451,6 +432,7 @@ import { getSource } from "./functions/getSource";
         // Avoid using `instanceof` here because of IE memory leak issues with host objects.
         var async = args[0] && args[0].async;
         return name === 'run' && (object instanceof Benchmark) &&
+        // @ts-ignore
           ((async == null ? object.options.async : async) && support.timeout || object.defer);
       }
 
@@ -467,7 +449,7 @@ import { getSource } from "./functions/getSource";
         // If we reached the last index then return `false`.
         return (queued ? benches.length : index < result.length)
           ? index
-          : (index = false);
+          : (index = null);
       }
       // Juggle arguments.
       if (typeof name === 'string') {
@@ -481,21 +463,22 @@ import { getSource } from "./functions/getSource";
         queued = options.queued;
       }
       // Start iterating over the array.
-      if (raiseIndex() !== false) {
+      if (raiseIndex() !== null) {
         // Emit "start" event.
         bench = result[index];
         eventProps.type = 'start';
         eventProps.target = bench;
-        options.onStart.call(benches, Event(eventProps));
+        options.onStart.call(benches, new Event(eventProps));
 
         // End early if the suite was aborted in an "onStart" listener.
+        // @ts-ignore
         if (name === 'run' && (benches instanceof Suite) && benches.aborted) {
           // Emit "cycle" event.
           eventProps.type = 'cycle';
-          options.onCycle.call(benches, Event(eventProps));
+          options.onCycle.call(benches, new Event(eventProps));
           // Emit "complete" event.
           eventProps.type = 'complete';
-          options.onComplete.call(benches, Event(eventProps));
+          options.onComplete.call(benches, new Event(eventProps));
         }
         // Start method execution.
         else {
@@ -661,7 +644,7 @@ import { getSource } from "./functions/getSource";
         return this;
       }
 
-      function callback(listeners, type) {
+      function callback(listeners, type?: string) {
         var index;
         if (typeof listeners === 'string') {
           type = listeners;
@@ -865,7 +848,7 @@ import { getSource } from "./functions/getSource";
       if (changes.length &&
         (bench.emit(event = new Event('reset')), !event.cancelled)) {
         for (var i = 0, il = changes.length; i < il; ++i) {
-          var data = changes[i];
+          const data = changes[i];
           data.destination[data.key] = data.value;
         }
       }
@@ -876,11 +859,13 @@ import { getSource } from "./functions/getSource";
      * Clocks the time taken to execute a test per cycle (secs).
      */
     function clock() {
+      // @ts-ignore
       var options = Benchmark.options,
-        templateData = {},
+        templateData = {} as AnyObject,
         timers = [{ 'ns': timer.ns, 'res': max(0.0015, getMinimumResolution(timer, 'ms')), 'unit': 'ms' }];
 
       // Lazy define for hi-res timers.
+      // @ts-ignore
       clock = function (clone) {
         var deferred;
 
@@ -1001,6 +986,7 @@ import { getSource } from "./functions/getSource";
           });
         }
         else if (timer.unit === 'us') {
+          // @ts-ignore
           if (timer.ns.stop) {
             Object.assign(templateData, {
               'begin': interpolate('s#=n#.start()'),
@@ -1044,27 +1030,7 @@ import { getSource } from "./functions/getSource";
         );
       }
 
-      var interpolationRegExp = {
-      };
-      /**
-       * Interpolates a given template string.
-       */
-      function interpolate(string) {
-        // Replaces all occurrences of `#` with a unique number and template tokens with content.
-        var result = string.replace(/\#/g, /\d+/.exec(templateData.uid));
-        var keys = Object.keys(templateData);
-        for (var i = 0, il = keys.length; i < il; ++i) {
-          if (result.indexOf('${' + keys[i] + '}') === -1) {
-            continue;
-          }
-
-          result = result.replace(
-            interpolationRegExp[keys[i]] || (interpolationRegExp[keys[i]] = new RegExp('\\$\\{' + keys[i] + '\\}', 'g')),
-            templateData[keys[i]]
-          );
-        }
-        return result;
-      }
+      const interpolate = interpolateByTemplateData(templateData);
 
       /*----------------------------------------------------------------------*/
 
@@ -1078,11 +1044,13 @@ import { getSource } from "./functions/getSource";
       } catch (e) { }
 
       // Detect Node.js's nanosecond resolution timer available in Node.js >= 0.8.
+      // @ts-ignore
       if (processObject && typeof (timer.ns = processObject.hrtime) === 'function') {
         timers.push({ 'ns': timer.ns, 'res': getMinimumResolution(timer, 'ns'), 'unit': 'ns' });
       }
       // Pick timer with highest resolution.
-      timer = timers.reduce(function (a, b) { return a.res <= b.res ? a : b }, {});
+      // @ts-ignore
+      timer = timers.reduce(function (a: AnyObject, b) { return a.res <= b.res ? a : b }, {});
 
       // Error if there are no working timers.
       if (timer.res === Infinity) {
@@ -1229,12 +1197,12 @@ import { getSource } from "./functions/getSource";
     /**
      * Cycles a benchmark until a run `count` can be established.
      */
-    function cycle(clone, options) {
-      options || (options = {});
+    function cycle(clone, options = {}) {
 
       var deferred;
       if (clone instanceof Deferred) {
         deferred = clone;
+        // @ts-ignore
         clone = clone.benchmark;
       }
       var clocked,
@@ -1243,6 +1211,7 @@ import { getSource } from "./functions/getSource";
         event,
         minTime,
         period,
+        // @ts-ignore
         async = options.async,
         bench = clone._original,
         count = clone.count,
@@ -1252,6 +1221,7 @@ import { getSource } from "./functions/getSource";
       if (clone.running) {
         // `minTime` is set to `Benchmark.options.minTime` in `clock()`.
         cycles = ++clone.cycles;
+        // @ts-ignore
         clocked = deferred ? deferred.elapsed : clock(clone);
         minTime = clone.minTime;
 
@@ -1538,8 +1508,10 @@ import { getSource } from "./functions/getSource";
 
   // Export Benchmark.
   // Some AMD build optimizers, like r.js, check for condition patterns like the following:
+      // @ts-ignore
   if (typeof define === 'function' && typeof define.amd === 'object' && define.amd) {
     // Define as an anonymous module so, through path mapping, it can be aliased.
+      // @ts-ignore
     define('benchmark', function () {
       return runInContext();
     });
@@ -1551,6 +1523,7 @@ import { getSource } from "./functions/getSource";
     if (freeExports && freeModule) {
       // Export for Node.js.
       if (moduleExports) {
+        // @ts-ignore
         (freeModule.exports = Benchmark).Benchmark = Benchmark;
       }
       // Export for CommonJS support.

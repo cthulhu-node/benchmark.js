@@ -1,13 +1,13 @@
 import { AnyObject } from "./AnyObject";
 
 export interface Context {
-  Array: Array<any>;
-  Date: Date;
-  Function: Function;
+  Array: ArrayConstructor;
+  Date: DateConstructor;
+  Function: FunctionConstructor;
   Math: Math;
-  Object: Object;
-  RegExp: RegExp;
-  String: typeof String;
+  Object: ObjectConstructor;
+  RegExp: RegExpConstructor;
+  String: StringConstructor;
   phantom: any;
   chrome: any;
   chromium: any;
