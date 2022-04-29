@@ -2,8 +2,8 @@
 
 <div align="center">
 
-[![Build Status](https://github.com/tinylib/tinylib/workflows/ci/badge.svg)](https://github.com/tinylib/tinylib/actions)
-[![Coverage Status](https://coveralls.io/repos/github/tinylib/tinylib/badge.svg?branch=master)](https://coveralls.io/github/tinylib/tinylib?branch=master)
+[![Build Status](https://github.com/tinylibs/tinybench/workflows/ci/badge.svg)](https://github.com/tinylibs/tinybench/actions)
+[![Coverage Status](https://coveralls.io/repos/github/tinylibs/tinybench/badge.svg?branch=master)](https://coveralls.io/github/tinylibs/tinybench?branch=master)
 
 </div>
 
@@ -18,7 +18,7 @@ A [robust](https://mathiasbynens.be/notes/javascript-benchmarking "Bulletproof J
 Using npm:
 
 ```shell
-$ npm i --save tinylib
+$ npm i --save tinybench
 ```
 
 Optionally, use the [microtime module](https://github.com/wadey/node-microtime) by Wade Simmons:
@@ -30,7 +30,7 @@ npm i --save microtime
 Usage example:
 
 ```js
-var Benchmark = require('benchmark');
+var Benchmark = require('tinybench');
 
 var suite = new Benchmark.Suite;
 
