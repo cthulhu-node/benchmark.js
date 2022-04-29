@@ -1,51 +1,24 @@
-# Benchmark.js v2.1.4
+# tinybench
 
 <div align="center">
 
-[![Build Status](https://github.com/cthulhu-node/benchmark.js/workflows/ci/badge.svg)](https://github.com/cthulhu-node/benchmark.js/actions)
-[![Coverage Status](https://coveralls.io/repos/github/cthulhu-node/benchmark.js/badge.svg?branch=master)](https://coveralls.io/github/cthulhu-node/benchmark.js?branch=master)
+[![Build Status](https://github.com/tinylib/tinylib/workflows/ci/badge.svg)](https://github.com/tinylib/tinylib/actions)
+[![Coverage Status](https://coveralls.io/repos/github/tinylib/tinylib/badge.svg?branch=master)](https://coveralls.io/github/tinylib/tinylib?branch=master)
 
 </div>
 
-A [robust](https://mathiasbynens.be/notes/javascript-benchmarking "Bulletproof JavaScript benchmarks") benchmarking library that supports high-resolution timers & returns statistically significant results. As seen on [jsPerf](https://jsperf.com/).
+A [robust](https://mathiasbynens.be/notes/javascript-benchmarking "Bulletproof JavaScript benchmarks") benchmarking library based on benchmark.js
 
 ## Documentation
 
 * [API Documentation](https://benchmarkjs.com/docs)
 
-## Download
-
- * [Development source](https://raw.githubusercontent.com/bestiejs/benchmark.js/2.1.4/benchmark.js)
-
 ## Installation
-
-In a browser:
-
-```html
-<script src="benchmark.js"></script>
-```
-
-In an AMD loader:
-
-```js
-require({
-  'paths': {
-    'benchmark': 'path/to/benchmark'
-  }
-},
-['benchmark'], function(Benchmark) {/*…*/});
-```
 
 Using npm:
 
 ```shell
-$ npm i --save benchmark
-```
-
-In Node.js:
-
-```js
-var Benchmark = require('benchmark');
+$ npm i --save tinylib
 ```
 
 Optionally, use the [microtime module](https://github.com/wadey/node-microtime) by Wade Simmons:
@@ -57,6 +30,8 @@ npm i --save microtime
 Usage example:
 
 ```js
+var Benchmark = require('benchmark');
+
 var suite = new Benchmark.Suite;
 
 // add tests
@@ -81,11 +56,3 @@ suite.add('RegExp#test', function() {
 // => String#indexOf x 6,139,623 +-1.00% (131 cycles)
 // => Fastest is String#indexOf
 ```
-
-## Support
-
-Tested in Chrome 54-55, Firefox 49-50, IE 11, Edge 14, Safari 9-10, Node.js 6-7, & PhantomJS 2.1.1.
-
-## BestieJS
-
-Benchmark.js is part of the BestieJS *“Best in Class”* module collection. This means we promote solid browser/environment support, ES5+ precedents, unit testing, & plenty of documentation.
