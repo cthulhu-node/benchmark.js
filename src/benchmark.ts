@@ -1,3 +1,4 @@
+// @ts-nocheck
 /*!
  * Benchmark.js
  * Copyright Aras Abbasi
@@ -6,15 +7,43 @@
  * Modified by John-David Dalton
  * Available under MIT license
  */
+
+import { delay } from "./bench/delay";
+import { getFirstArgument } from "./functions/getFirstArgument";
+import { cloneDeep } from "./helpers/cloneDeep";
+import { each } from "./helpers/each";
+import { entries } from "./helpers/entries";
+import { formatNumber } from "./helpers/formatNumber";
+import { forOwn } from "./helpers/forOwn";
+import { has } from "./helpers/has";
+import { indexOf } from "./helpers/indexOf";
+import { isArrayLikeObject } from "./helpers/isArrayLikeObject";
+import { isHostType } from "./helpers/isHostType";
+import { isPlainObject } from "./helpers/isPlainObject";
+import { isStringable } from "./helpers/isStringable";
+import { map } from "./helpers/map";
+import { noop } from "./helpers/noop";
+import { reduce } from "./helpers/reduce";
+import { toArray } from "./helpers/toArray";
+import { join } from "./invoke/join";
+import { getMean } from "./math/getMean";
+import { getU } from "./math/getU";
+import { getVariance } from "./math/getVariance";
+import { getZ } from "./math/getZ";
+import { divisors } from "./statistics/divisors";
+import { getMinimumResolution } from "./statistics/getMinimumResolution";
+import { tTable } from "./statistics/tTable";
+import { uTable } from "./statistics/uTable";
+import { getSupport } from "./Support";
+import { Context, getContext } from "./types/Context";
+
 ; (function () {
   'use strict';
 
   var version = '2.1.4';
 
   /** Used as a safe reference for `undefined` in pre ES5 environments. */
-  var undefined;
-
-  var noop = function () { };
+  var undefined: undefined;
 
   /** Used as a reference to the global object. */
   var root = ((typeof window === 'function' || typeof window === 'object') && window) || this;
@@ -43,326 +72,15 @@
   /** Detect the popular CommonJS extension `module.exports`. */
   var moduleExports = freeModule && freeModule.exports === freeExports && freeExports;
 
-  /** Used to detect primitive types. */
-  var rePrimitive = /^(?:boolean|number|string|undefined)$/;
-
   /** Used to make every compiled test unique. */
   var uidCounter = 0;
 
-  /** Used to assign default `context` object properties. */
-  var contextProps = [
-    'Array', 'Date', 'Function', 'Math', 'Object', 'RegExp', 'String',
-    'clearTimeout', 'chrome', 'chromium', 'document', 'navigator',
-    'process', 'runtime', 'setTimeout'
-  ];
-
-  /** Used to avoid hz of Infinity. */
-  var divisors = {
-    '1': 4096,
-    '2': 512,
-    '3': 64,
-    '4': 8,
-    '5': 0
-  };
-
-  /**
-   * T-Distribution two-tailed critical values for 95% confidence.
-   * For more info see 
-   * - https://www.cliffsnotes.com/study-guides/statistics/principles-of-testing/one-and-twotailed-tests
-   * - https://en.wikipedia.org/wiki/One-_and_two-tailed_tests
-   * - https://en.wikipedia.org/wiki/Student%27s_t-distribution
-   * - http://www.itl.nist.gov/div898/handbook/eda/section3/eda3672.htm (WARNING: the table listed there is for ONE-SIDED regions!)
-   */
-  var tTable = {
-    "1": 12.71, "2": 4.303, "3": 3.182, "4": 2.776, "5": 2.571, "6": 2.447, "7": 2.365, "8": 2.306, "9": 2.262, "10": 2.228,
-    "11": 2.201, "12": 2.179, "13": 2.16, "14": 2.145, "15": 2.131, "16": 2.12, "17": 2.11, "18": 2.101, "19": 2.093, "20": 2.086,
-    "21": 2.08, "22": 2.074, "23": 2.069, "24": 2.064, "25": 2.06, "26": 2.056, "27": 2.052, "28": 2.048, "29": 2.045, "30": 2.042,
-    "31": 2.0399, "32": 2.0378, "33": 2.0357, "34": 2.0336, "35": 2.0315, "36": 2.0294, "37": 2.0273, "38": 2.0252, "39": 2.0231, "40": 2.021,
-    "41": 2.0198, "42": 2.0186, "43": 2.0174, "44": 2.0162, "45": 2.015, "46": 2.0138, "47": 2.0126, "48": 2.0114, "49": 2.0102, "50": 2.009,
-    "51": 2.0081, "52": 2.0072, "53": 2.0063, "54": 2.0054, "55": 2.0045, "56": 2.0036, "57": 2.0027, "58": 2.0018, "59": 2.0009, "60": 2,
-    "61": 1.9995, "62": 1.999, "63": 1.9985, "64": 1.998, "65": 1.9975, "66": 1.997, "67": 1.9965, "68": 1.996, "69": 1.9955, "70": 1.995,
-    "71": 1.9945, "72": 1.994, "73": 1.9935, "74": 1.993, "75": 1.9925, "76": 1.9920, "77": 1.9915, "78": 1.991, "79": 1.9905, "80": 1.99,
-    "81": 1.9897, "82": 1.9894, "83": 1.9891, "84": 1.9888, "85": 1.9885, "86": 1.9882, "87": 1.9879, "88": 1.9876, "89": 1.9873, "90": 1.987,
-    "91": 1.9867, "92": 1.9864, "93": 1.9861, "94": 1.9858, "95": 1.9855, "96": 1.9852, "97": 1.9849, "98": 1.9846, "99": 1.9843, "100": 1.984,
-    "101": 1.9838, "102": 1.9836, "103": 1.9834, "104": 1.9832, "105": 1.983, "106": 1.9828, "107": 1.9826, "108": 1.9824, "109": 1.9822, "110": 1.982,
-    "111": 1.9818, "112": 1.9816, "113": 1.9814, "114": 1.9812, "115": 1.9819, "116": 1.9808, "117": 1.9806, "118": 1.9804, "119": 1.9802, "120": 1.98,
-    "infinity": 1.96
-  };
-
-  /**
-   * Critical Mann-Whitney U-values for 95% confidence.
-   * For more info see http://www.saburchill.com/IBbiology/stats/003.html.
-   */
-  var uTable = {
-    '5': [0, 1, 2],
-    '6': [1, 2, 3, 5],
-    '7': [1, 3, 5, 6, 8],
-    '8': [2, 4, 6, 8, 10, 13],
-    '9': [2, 4, 7, 10, 12, 15, 17],
-    '10': [3, 5, 8, 11, 14, 17, 20, 23],
-    '11': [3, 6, 9, 13, 16, 19, 23, 26, 30],
-    '12': [4, 7, 11, 14, 18, 22, 26, 29, 33, 37],
-    '13': [4, 8, 12, 16, 20, 24, 28, 33, 37, 41, 45],
-    '14': [5, 9, 13, 17, 22, 26, 31, 36, 40, 45, 50, 55],
-    '15': [5, 10, 14, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64],
-    '16': [6, 11, 15, 21, 26, 31, 37, 42, 47, 53, 59, 64, 70, 75],
-    '17': [6, 11, 17, 22, 28, 34, 39, 45, 51, 57, 63, 67, 75, 81, 87],
-    '18': [7, 12, 18, 24, 30, 36, 42, 48, 55, 61, 67, 74, 80, 86, 93, 99],
-    '19': [7, 13, 19, 25, 32, 38, 45, 52, 58, 65, 72, 78, 85, 92, 99, 106, 113],
-    '20': [8, 14, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90, 98, 105, 112, 119, 127],
-    '21': [8, 15, 22, 29, 36, 43, 50, 58, 65, 73, 80, 88, 96, 103, 111, 119, 126, 134, 142],
-    '22': [9, 16, 23, 30, 38, 45, 53, 61, 69, 77, 85, 93, 101, 109, 117, 125, 133, 141, 150, 158],
-    '23': [9, 17, 24, 32, 40, 48, 56, 64, 73, 81, 89, 98, 106, 115, 123, 132, 140, 149, 157, 166, 175],
-    '24': [10, 17, 25, 33, 42, 50, 59, 67, 76, 85, 94, 102, 111, 120, 129, 138, 147, 156, 165, 174, 183, 192],
-    '25': [10, 18, 27, 35, 44, 53, 62, 71, 80, 89, 98, 107, 117, 126, 135, 145, 154, 163, 173, 182, 192, 201, 211],
-    '26': [11, 19, 28, 37, 46, 55, 64, 74, 83, 93, 102, 112, 122, 132, 141, 151, 161, 171, 181, 191, 200, 210, 220, 230],
-    '27': [11, 20, 29, 38, 48, 57, 67, 77, 87, 97, 107, 118, 125, 138, 147, 158, 168, 178, 188, 199, 209, 219, 230, 240, 250],
-    '28': [12, 21, 30, 40, 50, 60, 70, 80, 90, 101, 111, 122, 132, 143, 154, 164, 175, 186, 196, 207, 218, 228, 239, 250, 261, 272],
-    '29': [13, 22, 32, 42, 52, 62, 73, 83, 94, 105, 116, 127, 138, 149, 160, 171, 182, 193, 204, 215, 226, 238, 249, 260, 271, 282, 294],
-    '30': [13, 23, 33, 43, 54, 65, 76, 87, 98, 109, 120, 131, 143, 154, 166, 177, 189, 200, 212, 223, 235, 247, 258, 270, 282, 293, 305, 317]
-  };
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * A specialized version of lodashs `cloneDeep` which only clones arrays and plain
-   * objects assigning all other values by reference.
-   */
-  var cloneDeep = function (value) {
-    if (Array.isArray(value)) {
-      return cloneArray(value);
-    }
-
-    if (isPlainObject(value)) {
-      return cloneObject(value);
-    }
-
-    return value;
-  }
-
-  function cloneObject(obj) {
-    var ret = {};
-
-    var key = '';
-    var keys = Object.keys(obj);
-
-    for (var i = 0, il = keys.length; i < il; ++i) {
-      key = keys[i];
-      ret[key] = cloneDeep(obj[key]);
-    }
-
-    return ret;
-  }
-
-  function cloneArray(arr) {
-    var ret = new Array(arr.length);
-
-    for (var i = 0, il = arr.length; i < il; ++i) {
-      ret[i] = cloneDeep(arr[i]);
-    }
-
-    return ret;
-  }
-
-  function isArrayLikeObject(value) {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      'length' in value &&
-      typeof value.length === 'number' &&
-      value.length > -1 &&
-      value.length % 1 === 0 &&
-      value.length <= Number.MAX_SAFE_INTEGER
-    )
-  }
-
-  function toArray(value) {
-    if (!value) {
-      return [];
-    }
-    if (Array.isArray(value)) {
-      return cloneArray(value);
-    }
-    if (isArrayLikeObject(value)) {
-      var result = new Array(value.length);
-      for (var i = 0, il = value.length; i < il; ++i) {
-        result[i] = value[i];
-      }
-      return result;
-    }
-    throw new TypeError('Expected an ArrayLikeObject')
-  }
-
-  function pick(object, keys) {
-    return keys.reduce(function (obj, key) {
-      if (object && object.hasOwnProperty(key)) {
-        obj[key] = object[key];
-      }
-      return obj;
-    }, {});
-  }
-
-  function entries(obj) {
-    var ownProps = Object.keys(obj),
-      i = ownProps.length,
-      resArray = new Array(i);
-    while (i--)
-      resArray[i] = [ownProps[i], obj[ownProps[i]]];
-
-    return resArray;
-  };
-
-  var objectCtorString = Object.prototype.toString.call(Object);
-
-  /**
-   * Checks if `value` is a plain object, that is, an object created by the
-   * `Object` constructor or one with a `[[Prototype]]` of `null`.
-   *
-   * function Foo() {
-   *   this.a = 1;
-   * }
-   *
-   * isPlainObject(new Foo);
-   * // => false
-   *
-   * isPlainObject([1, 2, 3]);
-   * // => false
-   *
-   * isPlainObject({ 'x': 0, 'y': 0 });
-   * // => true
-   *
-   * isPlainObject(Object.create(null));
-   * // => true
-   */
-  function isPlainObject(value) {
-    if (typeof value !== 'object' || value === null) {
-      return false;
-    }
-    var proto = Object.getPrototypeOf(value);
-    if (proto === null) {
-      return true;
-    }
-    var Ctor = Object.hasOwnProperty.call(proto, 'constructor') && proto.constructor;
-    return typeof Ctor === 'function' && Ctor instanceof Ctor &&
-      Object.prototype.toString.call(Ctor) === objectCtorString;
-  }
-
-  function each(collection, iteratee) {
-    if (Array.isArray(collection)) {
-      for (var i = 0, il = collection.length; i < il; ++i) {
-        if (iteratee(collection[i], i, collection) === false) {
-          break;
-        };
-      }
-      return;
-    }
-    if (typeof collection === 'object' && collection !== null) {
-      var keys = Object.keys(collection);
-      for (var i = 0, il = keys.length; i < il; ++i) {
-        var key = keys[i];
-        if (iteratee(collection[key], key, collection) === false) {
-          break;
-        };
-      }
-      return;
-    }
-  }
-
-  function forOwn(object, iteratee) {
-    for (var key in object) {
-      if (object.hasOwnProperty(key)) {
-        if (iteratee(object[key], key, object) === false) {
-          break;
-        }
-      }
-    }
-  }
-
-  function has(obj, key) {
-    if (!obj) {
-      return;
-    }
-
-    var keyParts = Array.isArray(key)
-      ? key
-      : key.indexOf('.') === -1 ? [key] : key.split('.');
-
-    return !!obj && (
-      keyParts.length > 1
-        ? has(obj[keyParts[0]], keyParts.slice(1).join('.'))
-        : obj.hasOwnProperty(key)
-    );
-  }
-
-  function indexOf(arr, value, position) {
-    return Array.prototype.indexOf.call(arr, value, position);
-  }
-
-  function map(collection, iteratee) {
-    var result = [];
-
-    if (typeof iteratee === 'string') {
-      var keys = Object.keys(collection);
-      for (var i = 0, il = keys.length; i < il; ++i) {
-        var key = keys[i];
-        if (collection[key][iteratee] !== undefined) {
-          result.push(collection[key][iteratee]);
-        }
-      }
-      return result;
-    }
-    if (Array.isArray(collection)) {
-      for (var i = 0, il = collection.length; i < il; ++i) {
-        result.push(iteratee(collection[i], i, collection));
-      }
-      return result;
-    }
-    if (typeof collection === 'object' && collection !== null) {
-      var keys = Object.keys(collection);
-      for (var i = 0, il = keys.length; i < il; ++i) {
-        var key = keys[i];
-        result.push(iteratee(collection[key], key, collection));
-      }
-      return result;
-    }
-  }
-
-  function reduce(collection, iteratee, initialValue) {
-    if (Array.isArray(collection)) {
-      if (collection.length === 0) {
-        return initialValue;
-      }
-      var value = initialValue || collection[0];
-
-      for (var i = 1, il = collection.length; i < il; ++i) {
-        value = iteratee(value, collection[i], i, collection);
-      }
-      return value;
-    }
-
-    if (typeof collection === 'object' && collection !== null) {
-      var keys = Object.keys(collection);
-
-      if (keys.length === 0) {
-        return initialValue;
-      }
-      var value = initialValue || collection[keys[0]];
-
-      for (var i = 0, il = keys.length; i < il; ++i) {
-        var key = keys[i];
-        value = iteratee(value, collection[key], key, collection);
-      }
-      return value;
-    }
-  }
-  /*--------------------------------------------------------------------------*/
-
-  function runInContext(context) {
+  function runInContext(context?: Context) {
     // Avoid issues with some ES3 environments that attempt to use values, named
     // after built-in constructors like `Object`, for the creation of literals.
     // ES5 clears this up by stating that literals must use built-in constructors.
     // See http://es5.github.io/#x11.1.5.
-    context = context ? Object.assign({}, root.Object(), context, pick(root, contextProps)) : root;
+    context = context ? Object.assign({}, root.Object(), context, getContext(root)) : root;
 
     /** Native constructor references. */
     var Array = context.Array,
@@ -395,9 +113,6 @@
     /** Detect DOM document object. */
     var doc = isHostType(context, 'document') && context.document;
 
-    /** Used to access Wade Simmons' Node.js `microtime` module. */
-    var microtimeObject = req('microtime');
-
     /** Used to access Node.js's high resolution timer. */
     var processObject = isHostType(context, 'process') && context.process;
 
@@ -410,31 +125,7 @@
     /** Used to avoid infinite recursion when methods call each other. */
     var calledBy = {};
 
-    var support = {};
-
-    (function () {
-      support.browser = doc && isHostType(context, 'navigator') && !isHostType(context, 'phantom');
-
-      support.timeout = isHostType(context, 'setTimeout') && isHostType(context, 'clearTimeout');
-
-      support.canInjectScript = freeDefine
-        ? (root.define.amd !== undefined)
-        : (root.Benchmark !== undefined);
-
-      try {
-        // Safari 2.x removes commas in object literals from `Function#toString` results.
-        // See http://webk.it/11609 for more details.
-        // Firefox 3.6 and Opera 9.25 strip grouping parentheses from `Function#toString` results.
-        // See http://bugzil.la/559438 for more details.
-        support.decompilation = Function(
-          ('return (' + (function (x) { return { 'x': '' + (1 + x) + '', 'y': 0 }; }) + ')')
-            // Avoid issues with code added by Istanbul.
-            .replace(/__cov__[^;]+;/g, '')
-        )()(0).x === '1';
-      } catch (e) {
-        support.decompilation = false;
-      }
-    }());
+    var support = getSupport(context);
 
     /**
      * Timer object used by `clock()` and `Deferred#resolve`.
@@ -552,59 +243,11 @@
     }
 
     /**
-     * Delay the execution of a function based on the benchmark's `delay` property.
-     */
-    function delay(bench, fn) {
-      bench._timerId = setTimeout(fn, bench.delay * 1e3);
-    }
-
-    /**
      * Destroys the given element.
      */
     function destroyElement(element) {
       trash.appendChild(element);
       trash.innerHTML = '';
-    }
-
-    /**
-     * Gets the name of the first argument from a function's source.
-     */
-    function getFirstArgument(fn) {
-      return (
-        typeof fn === 'function' &&
-        !('toString' in fn) &&
-        (/^[\s(]*function[^(]*\(([^\s,)]+)/.exec(fn) || 0)[1]) || '';
-    }
-
-    /**
-     * Computes the arithmetic mean of a sample.
-     */
-    function getMean(sample) {
-      if (sample.length === 0) {
-        return 0;
-      }
-
-      var result = 0;
-
-      for (var i = 0, il = sample.length; i < il; ++i) {
-        result += sample[i];
-      }
-      return result / sample.length;
-    }
-
-    /**
-     * Computes the variance of a sample.
-     */
-    function getVariance(sample, mean, size) {
-      if (sample.length === 0) {
-        return 0;
-      }
-      var result = 0;
-
-      for (var i = 0, il = sample.length; i < il; ++i) {
-        result += pow(sample[i] - mean, 2);
-      }
-      return result / (size - 1);
     }
 
     /**
@@ -625,42 +268,6 @@
       return /^(?:\/\*[\w\W]*?\*\/|\/\/.*?[\n\r\u2028\u2029]|\s)*(["'])use strict\1;?$/.test(result)
         ? ''
         : result;
-    }
-
-    /**
-     * Host objects can return type values that are different from their actual
-     * data type. The objects we are concerned with usually return non-primitive
-     * types of "object", "function", or "unknown".
-     */
-    function isHostType(object, property) {
-      if (object == null) {
-        return false;
-      }
-      var type = typeof object[property];
-      return !rePrimitive.test(type) && (type != 'object' || !!object[property]);
-    }
-
-    /**
-     * Checks if a value can be safely coerced to a string.
-     */
-    function isStringable(value) {
-      return typeof value === 'string' || (!!value && value.hasOwnProperty('toString') && typeof value.toString === 'function');
-    }
-
-    /**
-     * A wrapper around `require` to suppress `module missing` errors.
-     * Used to avoid inclusion in Browserified bundles.
-     */
-    function req(id) {
-      try {
-        var result;
-        if (freeExports && freeRequire) {
-          /** Used to avoid inclusion in Browserified bundles. */
-          // eg: microtime
-          result = freeRequire(id);
-        }
-      } catch (e) { }
-      return result || null;
     }
 
     /**
@@ -785,14 +392,6 @@
         return result;
       }
       throw new TypeError('Expected Array or Array-like-Object.');
-    }
-
-    var formatNumberRE = /(?=(?:\d{3})+$)(?!\b)/g;
-
-    function formatNumber(number) {
-      number = String(number).split('.');
-      return number[0].replace(formatNumberRE, ',') +
-        (number[1] ? '.' + number[1] : '');
     }
 
     function invoke(benches, name) {
@@ -933,29 +532,6 @@
         }
       }
       return result;
-    }
-
-    function join(object, separator1, separator2) {
-      var result = [],
-        length = (object = Object(object)).length,
-        arrayLike = length === length >>> 0;
-
-      separator2 || (separator2 = ': ');
-
-      if (Array.isArray(object)) {
-        return object.join(separator1 || ',');
-      } else if (isArrayLikeObject(object)) {
-        for (var i = 0, il = object.length; i < il; ++i) {
-          result.push(object[i]);
-        }
-        return result.join(separator1 || ',');
-      } else {
-        var keys = Object.keys(object);
-        for (var i = 0, il = keys.length; i < il; ++i) {
-          result.push(keys[i] + separator2 + object[keys[i]]);
-        }
-        return result.join(separator1 || ',');
-      }
     }
 
     function abortSuite() {
@@ -1231,31 +807,12 @@
         u2 = getU(sample2, sample1),
         u = min(u1, u2);
 
-      function getScore(xA, sampleB) {
-        var total = 0;
-        for (var i = 0, il = sampleB.length; i < il; ++i) {
-          total += (sampleB[i] > xA ? 0 : sampleB[i] < xA ? 1 : 0.5);
-        }
-        return total;
-      }
-
-      function getU(sampleA, sampleB) {
-        var total = 0;
-        for (var i = 0, il = sampleA.length; i < il; ++i) {
-          total += getScore(sampleA[i], sampleB);
-        }
-        return total;
-      }
-
-      function getZ(u) {
-        return (u - ((size1 * size2) / 2)) / sqrt((size1 * size2 * (size1 + size2 + 1)) / 12);
-      }
       // Reject the null hypothesis the two samples come from the
       // same population (i.e. have the same median) if...
       if (size1 + size2 > 30) {
         // ...the z-stat is greater than 1.96 or less than -1.96
         // http://www.statisticslectures.com/topics/mannwhitneyu/
-        zStat = getZ(u);
+        zStat = getZ(u, size1, size2, context);
         return abs(zStat) > 1.96 ? (u === u1 ? 1 : -1) : 0;
       }
       // ...the U value is less than or equal the critical U value.
@@ -1375,7 +932,7 @@
     function clock() {
       var options = Benchmark.options,
         templateData = {},
-        timers = [{ 'ns': timer.ns, 'res': max(0.0015, getRes('ms')), 'unit': 'ms' }];
+        timers = [{ 'ns': timer.ns, 'res': max(0.0015, getMinimumResolution(timer, 'ms')), 'unit': 'ms' }];
 
       // Lazy define for hi-res timers.
       clock = function (clone) {
@@ -1541,55 +1098,6 @@
         );
       }
 
-      /**
-       * Gets the current timer's minimum resolution (secs).
-       */
-      function getRes(unit) {
-        var measured,
-          begin,
-          count = 30,
-          divisor = 1e3,
-          ns = timer.ns,
-          sample = [];
-
-        // Get average smallest measurable time.
-        while (count--) {
-          if (unit === 'us') {
-            divisor = 1e6;
-            if (ns.stop) {
-              ns.start();
-              while (!(measured = ns.microseconds())) { }
-            } else {
-              begin = ns();
-              while (!(measured = ns() - begin)) { }
-            }
-          }
-          else if (unit === 'ns') {
-            divisor = 1e9;
-            begin = (begin = ns())[0] + (begin[1] / divisor);
-            while (!(measured = ((measured = ns())[0] + (measured[1] / divisor)) - begin)) { }
-            divisor = 1;
-          }
-          else if (ns.now) {
-            begin = (+ns.now());
-            while (!(measured = (+ns.now()) - begin)) { }
-          }
-          else {
-            begin = new ns().getTime();
-            while (!(measured = new ns().getTime() - begin)) { }
-          }
-          // Check for broken timers.
-          if (measured > 0) {
-            sample.push(measured);
-          } else {
-            sample.push(Infinity);
-            break;
-          }
-        }
-        // Convert to seconds.
-        return getMean(sample) / divisor;
-      }
-
       var interpolationRegExp = {
       };
       /**
@@ -1619,17 +1127,13 @@
       // line switch in at least Chrome 7 to use chrome.Interval
       try {
         if ((timer.ns = new (context.chrome || context.chromium).Interval)) {
-          timers.push({ 'ns': timer.ns, 'res': getRes('us'), 'unit': 'us' });
+          timers.push({ 'ns': timer.ns, 'res': getMinimumResolution(timer, 'us'), 'unit': 'us' });
         }
       } catch (e) { }
 
       // Detect Node.js's nanosecond resolution timer available in Node.js >= 0.8.
       if (processObject && typeof (timer.ns = processObject.hrtime) === 'function') {
-        timers.push({ 'ns': timer.ns, 'res': getRes('ns'), 'unit': 'ns' });
-      }
-      // Detect Wade Simmons' Node.js `microtime` module.
-      if (microtimeObject && typeof (timer.ns = microtimeObject.now) === 'function') {
-        timers.push({ 'ns': timer.ns, 'res': getRes('us'), 'unit': 'us' });
+        timers.push({ 'ns': timer.ns, 'res': getMinimumResolution(timer, 'ns'), 'unit': 'ns' });
       }
       // Pick timer with highest resolution.
       timer = timers.reduce(function (a, b) { return a.res <= b.res ? a : b }, {});
@@ -1731,7 +1235,7 @@
           // Compute the sample mean (estimate of the population mean).
           mean = getMean(sample);
           // Compute the sample variance (estimate of the population variance).
-          variance = getVariance(sample, mean, size);
+          variance = getVariance(sample, mean, size, context);
           // Compute the sample standard deviation (estimate of the population standard deviation).
           sd = sqrt(variance);
           // Compute the standard error of the mean (a.k.a. the standard deviation of the sampling distribution of the sample mean).

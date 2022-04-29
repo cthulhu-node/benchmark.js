@@ -12,7 +12,7 @@ var amd = root.define && define.amd,
 
 var describe = root.mocha && root.Mocha.describe || require('mocha').describe;
 var assert = root.chai && root.chai.assert || require('chai').assert;
-var Benchmark = root.Benchmark || require('..');
+var Benchmark = root.Benchmark || require('../dist/benchmark');
 
 /** Used to create dummy benchmarks for comparisons. */
 function generateBenchData() {

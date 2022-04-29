@@ -1,0 +1,1 @@
+export type EventListener = (e: EventListener, ...args: any[]) => void | false;

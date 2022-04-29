@@ -1,0 +1,1 @@
+export type EventType = 'abort' | 'reset' | 'cycle' | 'error' | 'start' | 'complete';

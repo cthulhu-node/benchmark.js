@@ -22,6 +22,7 @@
   ],
   "repository": "bestiejs/benchmark.js",
   "scripts": {
+    "build": "tsc -p .",
     "coveralls": "nyc report --reporter=lcov",
     "test": "npm run test:mocha",
     "test:parallel": "npm run test:mocha:parallel",
@@ -31,11 +32,13 @@
     "test:tsd": "tsd"
   },
   "devDependencies": {
+    "@types/node": "^17.0.30",
     "chai": "^4.3.6",
     "coveralls": "^3.1.1",
     "mocha": "^9.2.2",
     "nyc": "^15.1.0",
-    "tsd": "^0.20.0"
+    "tsd": "^0.20.0",
+    "typescript": "^4.6.4"
   },
   "files": [
     "types",
