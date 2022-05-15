@@ -123,16 +123,15 @@
 
   /*--------------------------------------------------------------------------*/
 
-
   var isAsyncFunction;
   try {
-    var asyncFunctionPrototype = eval('Object.getPrototypeOf(async function () { })');
+    var asyncFunctionPrototype = new Function('return Object.getPrototypeOf(async function () { })')();
     isAsyncFunction = function (fn) {
       try {
         return (
           (
             typeof fn === 'string' &&
-            asyncFunctionPrototype === eval('Object.getPrototypeOf(' + fn + ')')
+            asyncFunctionPrototype === Object.getPrototypeOf(new Function(fn))
           ) ||
           (
             typeof fn === 'function' &&
