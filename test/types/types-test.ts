@@ -255,6 +255,8 @@ suite.add(fn);
 // or using a name first
 suite.add('foo', fn);
 
+suite.add('async', async function() {});
+
 // or with options
 suite.add('foo', fn, {
   'onCycle': onCycle,
