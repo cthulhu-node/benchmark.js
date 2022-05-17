@@ -1,11 +1,20 @@
-// Type definitions for Benchmark v2.1.4
-// Project: https://benchmarkjs.com
+// Type definitions for tinybench
+// based on @types/benchmark
 // Definitions by: Asana <https://asana.com>
 //                 Charlie Fish <https://github.com/fishcharlie>
 //                 Blair Zajac <https://github.com/blair>
-// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
 type AnyObject = { [key: string | number | symbol]: any; };
+type EventHandler<T> = (this: T, event: Benchmark.Event) => void;
+type EventType =
+    'abort' |
+    'complete' |
+    'cycle' |
+    'error' |
+    'reset' |
+    'start';
+
+type EventTypeMixed = string;
 
 declare class Benchmark {
 
@@ -103,7 +112,7 @@ declare class Benchmark {
      * @param {Object} [context=root] The context object.
      * @returns {Function} Returns a new `Benchmark` function.
      */
-    static runInContext(context: AnyObject): Function;
+    static runInContext(context: AnyObject): Benchmark;
 
     static each(obj: AnyObject | any[], callback: Function, thisArg?: any): void;
     static forEach<T>(arr: T[], callback: (value: T) => any, thisArg?: any): void;
@@ -212,9 +221,9 @@ declare class Benchmark {
      *   'My name is '.concat(this.name); // "My name is foo"
      * });
      */
-    constructor(name: string, fn: Function | (ThisBenchmarkFunction) | string, options?: Benchmark.Options);
+    constructor(name: string, fn: ((this: Benchmark) => void) | string, options?: Benchmark.Options);
     constructor(name: string, options?: Benchmark.Options);
-    constructor(fn: Function | (ThisBenchmarkFunction) | string, options?: Benchmark.Options);
+    constructor(fn: ((this: Benchmark) => void) | string, options?: Benchmark.Options);
     constructor(options: Benchmark.Options);
 
     id: number;
@@ -337,14 +346,14 @@ declare class Benchmark {
      *   }())
      * }())
      */
-    setup: ThisBenchmarkFunction | string;
+    setup: ((this: Benchmark) => void) | string;
 
     /**
      * Compiled into the test and executed immediately **after** the test loop.
      * 
      * @type {Function|string}
      */
-    teardown: ThisBenchmarkFunction  | string;
+    teardown: ((this: Benchmark) => void) | string;
 
     /**
      * An object of stats including mean, margin or error, and standard deviation.
@@ -404,7 +413,7 @@ declare class Benchmark {
      * @param {string} type The event type.
      * @returns {Array} The listeners array.
      */
-    listeners(type: string): Function[];
+    listeners(type: string): EventHandler<Benchmark>[];
 
     /**
      * Unregisters a listener for the specified event type(s),
@@ -431,8 +440,8 @@ declare class Benchmark {
      * // unregister all listeners for all event types
      * bench.off();
      */
-    off(type?: string, fn?: Function): Benchmark;
-    off(types: string[]): Benchmark;
+    off(type?: EventTypeMixed, fn?: EventHandler<Benchmark>): Benchmark;
+    off(types: EventType[]): Benchmark;
 
     /**
      * Registers a listener for the specified event type(s).
@@ -448,8 +457,8 @@ declare class Benchmark {
      * // register a listener for multiple event types
      * bench.on('start cycle', listener);
      */
-    on(type?: string, fn?: Function): Benchmark;
-    on(types: string[]): Benchmark;
+    on(type?: EventTypeMixed, fn?: EventHandler<Benchmark>): Benchmark;
+    on(types: EventType[]): Benchmark;
 
     /**
      * Reset properties and abort if running.
@@ -482,8 +491,6 @@ declare class Benchmark {
      */
     toString(): string;
 }
-
-type ThisBenchmarkFunction = (this: Benchmark) => void;
 
 declare namespace Benchmark {
     export interface Options {
@@ -565,46 +572,46 @@ declare namespace Benchmark {
          *
          * @type Function
          */
-        onAbort?: Function | undefined;
+        onAbort?: EventHandler<Benchmark> | undefined;
 
         /**
          * An event listener called when the benchmark completes running.
          *
          * @type Function
          */
-        onComplete?: Function | undefined;
+        onComplete?: EventHandler<Benchmark> | undefined;
 
         /**
          * An event listener called after each run cycle.
          *
          * @type Function
          */
-        onCycle?: Function | undefined;
+        onCycle?: EventHandler<Benchmark> | undefined;
 
         /**
          * An event listener called when a test errors.
          *
          * @type Function
          */
-        onError?: Function | undefined;
+        onError?: EventHandler<Benchmark> | undefined;
 
         /**
          * An event listener called when the benchmark is reset.
          *
          * @type Function
          */
-        onReset?: Function | undefined;
+        onReset?: EventHandler<Benchmark> | undefined;
 
         /**
          * An event listener called when the benchmark starts running.
          *
          * @type Function
          */
-        onStart?: Function | undefined;
+        onStart?: EventHandler<Benchmark> | undefined;
 
-        setup?: ThisBenchmarkFunction | string | undefined;
-        teardown?: ThisBenchmarkFunction | string | undefined;
-        fn?: Function | string | undefined;
+        setup?: ((this: Benchmark) => void) | string | undefined;
+        teardown?: ((this: Benchmark) => void) | string | undefined;
+        fn?: ((deferred: Deferred) => void) | (() => void) | string | undefined;
         queued?: boolean | undefined;
     }
 
@@ -864,7 +871,7 @@ declare namespace Benchmark {
          * @constructor
          * @param {Object|string} type The event type.
          */
-        constructor(type: string | Object);
+        constructor(type: EventType | Object);
 
         /**
          * A flag to indicate if the emitters listener iteration is aborted.
@@ -913,7 +920,7 @@ declare namespace Benchmark {
          *
          * @type {string}
          */
-        type: string;
+        type: EventType;
     }
 
     export class Suite {
@@ -1041,8 +1048,18 @@ declare namespace Benchmark {
          *   'onComplete': onComplete
          * });
          */
-        add(name: string, fn: Function | string, options?: Options): Suite;
-        add(fn: Function | string, options?: Options): Suite;
+        add(name: string, fn: ((this: Suite, deferred: Deferred) => void), options: Options): Suite;
+        add(name: string, fn: ((this: Suite) => void), options: Options): Suite;
+        add(name: string, fn: string, options: Options): Suite;
+        add(name: string, fn: ((this: Suite, deferred: Deferred) => void)): Suite;
+        add(name: string, fn: ((this: Suite) => void)): Suite;
+        add(name: string, fn: string): Suite;
+        add(fn: ((this: Suite, deferred: Deferred) => void), options: Options): Suite;
+        add(fn: ((this: Suite) => void), options: Options): Suite;
+        add(fn: string, options: Options): Suite;
+        add(fn: ((this: Suite, deferred: Deferred) => void)): Suite;
+        add(fn: ((this: Suite) => void)): Suite;
+        add(fn: string): Suite;
         add(name: string, options?: Options): Suite;
         add(options: Options): Suite;
 
@@ -1081,7 +1098,7 @@ declare namespace Benchmark {
          * @param {string} type The event type.
          * @returns {Array} The listeners array.
          */
-        listeners(type: string): Function[];
+        listeners(type: string): EventHandler<Suite>[];
 
         /**
          * Unregisters a listener for the specified event type(s),
@@ -1108,8 +1125,8 @@ declare namespace Benchmark {
          * // unregister all listeners for all event types
          * bench.off();
          */
-        off(type?: string, callback?: Function): Suite;
-        off(types: string[]): Suite;
+        off(type?: EventTypeMixed, callback?: EventHandler<Suite>): Suite;
+        off(types: EventType[]): Suite;
 
         /**
          * Registers a listener for the specified event type(s).
@@ -1125,8 +1142,8 @@ declare namespace Benchmark {
          * // register a listener for multiple event types
          * bench.on('start cycle', listener);
          */
-        on(type?: string, fn?: Function): Suite;
-        on(types: string[]): Suite;
+        on(type?: EventTypeMixed, fn?: EventHandler<Suite>): Suite;
+        on(types: EventType[]): Suite;
         push(benchmark: Benchmark): number;
 
         /**
@@ -1157,7 +1174,7 @@ declare namespace Benchmark {
          * Reverses the elements in an array in place.
          * This method mutates the array and returns a reference to the same array.
          */
-        reverse(): any[];
+        reverse(): Benchmark[];
 
         /**
          * Sorts an array in place.
@@ -1169,7 +1186,7 @@ declare namespace Benchmark {
          * [11,2,22,1].sort((a, b) => a - b)
          * ```
          */
-        sort(compareFn: (a: any, b: any) => number): any[];
+        sort(compareFn: (a: Benchmark, b: Benchmark) => number): Benchmark[];
 
         /**
          * Removes elements from an array and, if necessary, inserts new elements in their place, returning the deleted elements.
@@ -1178,16 +1195,17 @@ declare namespace Benchmark {
          * @param items Elements to insert into the array in place of the deleted elements.
          * @returns An array containing the elements that were deleted.
          */
-        splice(start: number, deleteCount?: number, items?: Suite): Suite[];
+        splice(start: number, deleteCount?: number, items?: Benchmark): Benchmark[];
         unshift(benchmark: Benchmark): number;
 
-        each(callback: Function): Suite;
-        forEach(callback: Function): Suite;
-        indexOf(value: any): number;
-        map(callback: Function | string): any[];
-        reduce<T>(callback: Function, accumulator: T): T;
+        each(callbackfn: (value: Benchmark, index: number, array: Suite) => void, thisArg?: Suite): Suite;
+        forEach(callbackfn: (value: Benchmark, index: number, array: Suite) => void, thisArg?: Suite): Suite;
+        indexOf(searchElement: Benchmark, fromIndex?: number): number;
+        map(callbackfn: (value: Benchmark, index: number, array: Suite) => number, thisArg?: any): any[];
+        map(value: string): Benchmark[]
+        reduce(callbackfn: (previousValue: Benchmark, currentValue: Benchmark, currentIndex: number, array: Benchmark[]) => Benchmark, initialValue?: Benchmark): Benchmark;
 
-        pop(): Function;
+        pop(): Benchmark;
         shift(): Benchmark;
         slice(start: number, end: number): any[];
         slice(start: number, deleteCount: number, ...values: any[]): any[];

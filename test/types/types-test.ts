@@ -4,9 +4,10 @@ import Benchmark from "../../types";
 var suite = new Benchmark.Suite;
 
 // add tests
-suite.add('RegExp#test', function () {
-  /o/.test('Hello World!');
-})
+suite
+  .add('RegExp#test', function () {
+    /o/.test('Hello World!');
+  })
   .add('String#indexOf', function () {
     'Hello World!'.indexOf('o') > -1;
   })
@@ -14,11 +15,12 @@ suite.add('RegExp#test', function () {
     !!'Hello World!'.match(/o/);
   })
   // add listeners
-  .on('cycle', function (event: Benchmark.Event) {
-    console.log(String(event.target));
+  .on('cycle', function (event) {
+    expectType<Benchmark.Event>(event);
   })
-  .on('complete', function (this: Benchmark.Suite) {
-    console.log('Fastest is ' + this.filter('fastest').map('name'));
+  .on('complete', function (this) {
+    expectType<Benchmark.Suite>(this);
+    expectType<(callback: string | Function) => Benchmark.Suite>(this.filter);
   })
   // run async
   .run({ 'async': true });
@@ -33,8 +35,6 @@ var onComplete = () => { };
 var setup = () => { };
 var teardown = () => { };
 var benches: Benchmark[] = [new Benchmark(fn), new Benchmark(fn)];
-var listener = () => { };
-var count: number = 0;
 
 // basic usage (the `new` operator is optional)
 var bench = new Benchmark(fn);
@@ -80,7 +80,8 @@ var bench = new Benchmark('foo', {
   'defer': true,
 
   // benchmark test function
-  'fn': function (deferred: Benchmark.Deferred) {
+  'fn': function (deferred) {
+    expectType<Benchmark.Deferred>(deferred);
     // call `Deferred#resolve` when the deferred test is finished
     deferred.resolve();
   }
@@ -98,7 +99,12 @@ var bench = new Benchmark({
 
 // a test’s `this` binding is set to the benchmark instance
 var bench = new Benchmark('foo', function () {
-  'My name is '.concat(this.name); // "My name is foo"
+  expectType<Benchmark>(this);
+});
+
+// a test’s `this` binding is set to the benchmark instance
+var bench = new Benchmark(function () {
+  expectType<Benchmark>(this);
 });
 
 // get odd numbers
@@ -119,7 +125,7 @@ Benchmark.filter(benches, 'successful');
 Benchmark.invoke(benches, 'reset');
 
 // invoke `emit` with arguments
-Benchmark.invoke(benches, 'emit', 'complete', listener);
+Benchmark.invoke(benches, 'emit', 'complete', () => ({}));
 
 // invoke `run(true)`, treat benchmarks as a queue, and register invoke callbacks
 Benchmark.invoke(benches, {
@@ -143,26 +149,15 @@ Benchmark.invoke(benches, {
   'onComplete': onComplete
 });
 
-var element: HTMLElement;
 // basic usage
 var bench = new Benchmark({
   'setup': function () {
     expectType<Benchmark>(this);
-    var c = this.count || 0,
-      element = document.getElementById('container');
-    while (c--) {
-      if (element) {
-        element.appendChild(document.createElement('div'));
-      }
-    }
   },
   'teardown': function () {
     expectType<Benchmark>(this);
   },
   'fn': function () {
-    if (element.lastChild) {
-      element.removeChild(element.lastChild);
-    }
   }
 });
 
@@ -185,10 +180,16 @@ var bizarro = bench.clone({
 });
 
 // unregister a listener for an event type
-bench.off('cycle', listener);
+bench.off('cycle', function (event) {
+  expectType<Benchmark>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // unregister a listener for multiple event types
-bench.off('start cycle', listener);
+bench.off('start cycle', function (event) {
+  expectType<Benchmark>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // unregister all listeners for an event type
 bench.off('cycle');
@@ -200,10 +201,14 @@ bench.off('start cycle complete');
 bench.off();
 
 // register a listener for an event type
-bench.on('cycle', listener);
+bench.on('cycle', function (event) {
+  expectType<Benchmark>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // ensure target is correct type
-bench.on('cycle', (event: Benchmark.Event) => {
+bench.on('cycle', (event) => {
+  expectType<Benchmark.Event>(event);
   const target = event.target;
   target.options;
   target.async;
@@ -241,7 +246,10 @@ bench.on('cycle', (event: Benchmark.Event) => {
 });
 
 // register a listener for multiple event types
-bench.on('start cycle', listener);
+bench.on('start cycle', function (event) {
+  expectType<Benchmark>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // basic usage
 bench.run();
@@ -255,7 +263,16 @@ suite.add(fn);
 // or using a name first
 suite.add('foo', fn);
 
-suite.add('async', async function() {});
+suite.add('async', async function () { });
+
+suite.add('sync', function () {
+  expectType<Benchmark.Suite>(this);
+});
+
+suite.add('sync', function (deferred) {
+  expectType<Benchmark.Suite>(this);
+  expectType<Benchmark.Deferred>(deferred);
+});
 
 // or with options
 suite.add('foo', fn, {
@@ -279,25 +296,37 @@ suite.add({
 });
 
 // unregister a listener for an event type
-suite.off('cycle', listener) as Benchmark.Suite;
+suite.off('cycle', function (event) {
+  expectType<Benchmark.Suite>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // unregister a listener for multiple event types
-suite.off('start cycle', listener) as Benchmark.Suite;
+suite.off('start cycle', function (event) {
+  expectType<Benchmark.Suite>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // unregister all listeners for an event type
-suite.off('cycle') as Benchmark.Suite;
+expectType<Benchmark.Suite>(suite.off('cycle'));
 
 // unregister all listeners for multiple event types
-suite.off('start cycle complete') as Benchmark.Suite;
+expectType<Benchmark.Suite>(suite.off('start cycle complete'));
 
 // unregister all listeners for all event types
-suite.off() as Benchmark.Suite;
+expectType<Benchmark.Suite>(suite.off());
 
 // register a listener for an event type
-suite.on('cycle', listener) as Benchmark.Suite;
+suite.on('cycle', function (event) {
+  expectType<Benchmark.Suite>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // register a listener for multiple event types
-suite.on('start cycle', listener) as Benchmark.Suite;
+suite.on('start cycle', function (event) {
+  expectType<Benchmark.Suite>(this);
+  expectType<Benchmark.Event>(event);
+});
 
 // basic usage
 suite.run();
